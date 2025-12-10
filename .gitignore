@@ -1,0 +1,46 @@
+# Android
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build/
+/captures
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.dex
+*.class
+*.log
+*.tmp
+
+# App build
+/app/build/
+
+# Kotlin
+*.kotlin_module
+
+# Node.js Backend
+backend/node_modules/
+backend/.env
+backend/logs/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# IntelliJ
+*.ipr
+*.iws
+
+# OS
+Thumbs.db
+*.swp
+*~
+
+# Logs
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

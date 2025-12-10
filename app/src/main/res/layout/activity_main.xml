@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F5F5F5"
+    tools:context=".MainActivity">
+
+    <!-- Header / Toolbar Area -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@color/design_default_color_primary"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📸 Performance Demo Gallery"
+            android:textSize="20sp"
+            android:textColor="@android:color/white"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Toggle BAD/GOOD mode to compare performance"
+            android:textSize="12sp"
+            android:textColor="@android:color/white"
+            android:alpha="0.8" />
+    </LinearLayout>
+
+    <!-- Control Panel -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:background="@android:color/white"
+        android:elevation="4dp">
+
+        <!-- Mode Toggle -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="⚠️ Use BAD Implementation (Laggy)"
+                android:textSize="14sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switchBadMode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true" />
+        </LinearLayout>
+
+        <!-- Search -->
+        <EditText
+            android:id="@+id/etSearch"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/edit_text_bg"
+            android:hint="🔍 Search photos..."
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:inputType="text"
+            android:singleLine="true" />
+
+        <!-- Action Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <Button
+                android:id="@+id/btnSort"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Sort A-Z"
+                android:textSize="12sp"
+                android:layout_marginEnd="4dp"
+                style="@style/Widget.Material3.Button.TonalButton" />
+
+            <Button
+                android:id="@+id/btnRefresh"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Refresh"
+                android:textSize="12sp"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                style="@style/Widget.Material3.Button.TonalButton" />
+
+            <Button
+                android:id="@+id/btnStressCpu"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Stress CPU"
+                android:textSize="12sp"
+                android:layout_marginStart="4dp"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:backgroundTint="#FF5722" />
+        </LinearLayout>
+
+        <!-- Status -->
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="⚠️ BAD MODE | Photos: 0"
+            android:textSize="12sp"
+            android:textColor="#666666"
+            android:gravity="center" />
+    </LinearLayout>
+
+    <!-- Loading Indicator -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="16dp"
+        android:visibility="gone" />
+
+    <!-- Photo List -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="8dp"
+        android:clipToPadding="false"
+        tools:listitem="@layout/item_photo" />
+
+</LinearLayout>
