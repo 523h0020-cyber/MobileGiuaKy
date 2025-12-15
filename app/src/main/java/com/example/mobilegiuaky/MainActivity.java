@@ -156,6 +156,13 @@ public class MainActivity extends AppCompatActivity {
 
         // Stress CPU button
         btnStressCpu.setOnClickListener(v -> stressCpu());
+
+        // Admin button
+        Button btnAdmin = findViewById(R.id.btnAdmin);
+        btnAdmin.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, AdminActivity.class);
+            startActivity(intent);
+        });
     }
 
     private void loadPhotos() {
@@ -301,5 +308,16 @@ public class MainActivity extends AppCompatActivity {
     private void updateStatusText() {
         String mode = useBadImplementation ? "⚠️ BAD MODE (Laggy)" : "✅ GOOD MODE (Smooth)";
         tvStatus.setText(mode + " | Photos: " + photoList.size());
+    }
+
+    /**
+     * 🔄 REAL-TIME SYNC: Auto-refresh khi app resume
+     * Để sync với thay đổi từ Admin app
+     */
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.d(TAG, "onResume - Auto refreshing data...");
+        loadPhotos();  // Reload từ server để sync với Admin app
     }
 }
