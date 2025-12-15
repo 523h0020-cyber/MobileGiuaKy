@@ -22,6 +22,7 @@ import androidx.core.view.WindowInsetsCompat;
 import com.bumptech.glide.Glide;
 import com.example.mobilegiuaky.model.Photo;
 import com.example.mobilegiuaky.utils.ImageDownloader;
+import com.example.mobilegiuaky.utils.OptimizedImageDownloader;
 import com.example.mobilegiuaky.utils.LeakyManager;
 
 /**
@@ -213,10 +214,30 @@ public class PhotoDetailActivity extends AppCompatActivity implements LeakyManag
                     mainHandler.post(() -> {
                         if (!isDestroyed() && !isFinishing()) {
                             ivPhotoLarge.setImageBitmap(bitmap);
-                            progressBar.setVisibility(View.GONE);
-                            tvStatus.setText("✅ Downloaded successfully (GOOD way)");
-                            Toast.makeText(PhotoDetailActivity.this, 
-                                    "Download complete! UI stayed responsive", Toast.LENGTH_SHORT).show();
+                            // Save to Downloads using OptimizedImageDownloader
+                            String fileName = "downloaded_" + photo.getId() + ".jpg";
+                            OptimizedImageDownloader.downloadAndSave(PhotoDetailActivity.this, photo.getImageUrl(), fileName,
+                                    new OptimizedImageDownloader.DownloadAndSaveCallback() {
+                                        @Override
+                                        public void onComplete(Bitmap bm, String filePath) {
+                                            if (!isDestroyed() && !isFinishing()) {
+                                                progressBar.setVisibility(View.GONE);
+                                                tvStatus.setText("✅ Downloaded & saved: " + fileName);
+                                                Toast.makeText(PhotoDetailActivity.this,
+                                                        "Saved to Downloads: " + fileName, Toast.LENGTH_SHORT).show();
+                                            }
+                                        }
+
+                                        @Override
+                                        public void onError(String error) {
+                                            if (!isDestroyed() && !isFinishing()) {
+                                                progressBar.setVisibility(View.GONE);
+                                                tvStatus.setText("Save error: " + error);
+                                                Toast.makeText(PhotoDetailActivity.this,
+                                                        "Save error: " + error, Toast.LENGTH_SHORT).show();
+                                            }
+                                        }
+                                    });
                         }
                     });
                 }

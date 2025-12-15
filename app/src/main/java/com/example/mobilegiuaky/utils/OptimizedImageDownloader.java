@@ -1,15 +1,19 @@
 package com.example.mobilegiuaky.utils;
-
+import android.provider.MediaStore;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Environment;
+import android.content.ContentValues;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.net.Uri;
+import android.content.ContentResolver;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.concurrent.ExecutorService;
@@ -24,8 +28,7 @@ import java.util.concurrent.Executors;
  * - UI updates (on main thread via Handler)
  */
 public class OptimizedImageDownloader {
-    
-    private static final String TAG = "OptimizedDownloader";
+        private static final String TAG = "OptimizedDownloader";
     
     // Thread pool for background operations
     private static final ExecutorService executor = Executors.newFixedThreadPool(4);
@@ -81,25 +84,55 @@ public class OptimizedImageDownloader {
     public static void saveImage(Context context, Bitmap bitmap, String fileName, SaveCallback callback) {
         executor.execute(() -> {
             try {
-                File directory = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-                if (directory == null) {
-                    directory = context.getFilesDir();
+                String mimeType = "image/jpeg";
+                OutputStream fos;
+                String savedPath = null;
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    // Android 10+ (API 29+): Use MediaStore (DOWNLOADS)
+                    ContentValues values = new ContentValues();
+                    values.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
+                    values.put(MediaStore.Downloads.MIME_TYPE, mimeType);
+                    values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+                    values.put(MediaStore.Downloads.IS_PENDING, 1);
+                    ContentResolver resolver = context.getContentResolver();
+                    Uri uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+                    if (uri == null) throw new Exception("Failed to create new MediaStore record");
+                    fos = resolver.openOutputStream(uri);
+                    if (fos == null) throw new Exception("Failed to open output stream");
+                    // Save bitmap
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 85, fos);
+                    fos.flush();
+                    fos.close();
+                    // Mark as not pending
+                    values.clear();
+                    values.put(MediaStore.Downloads.IS_PENDING, 0);
+                    resolver.update(uri, values, null, null);
+                    savedPath = uri.toString();
+                } else {
+                    // Sử dụng thư mục Download công khai thay vì thư mục riêng của app
+                    File directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+
+                    // Tạo thư mục nếu chưa tồn tại
+                    if (!directory.exists()) {
+                        directory.mkdirs();
+                    }
+
+                    File file = new File(directory, fileName);
+                    fos = new FileOutputStream(file);
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+                    fos.flush();
+                    fos.close();
+
+                    savedPath = file.getAbsolutePath();
+
+                    // QUAN TRỌNG: Báo cho hệ thống biết có file mới để nó quét và hiển thị ngay
+                    // Nếu không có dòng này, file có thể không hiện lên ngay lập tức
+                    android.media.MediaScannerConnection.scanFile(context,
+                            new String[]{file.toString()}, null, null);
                 }
-                
-                File file = new File(directory, fileName);
-                FileOutputStream fos = new FileOutputStream(file);
-                
-                // Use JPEG for photos (smaller file size, faster compression)
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 85, fos);
-                
-                fos.flush();
-                fos.close();
-                
-                Log.d(TAG, "✅ Image saved to: " + file.getAbsolutePath());
-                
-                final String filePath = file.getAbsolutePath();
+                Log.d(TAG, "✅ Image saved to: " + savedPath);
+                final String filePath = savedPath;
                 mainHandler.post(() -> callback.onSuccess(filePath));
-                
             } catch (Exception e) {
                 Log.e(TAG, "Save error: " + e.getMessage());
                 mainHandler.post(() -> callback.onError(e.getMessage()));

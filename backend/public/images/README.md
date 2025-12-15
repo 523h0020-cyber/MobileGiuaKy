@@ -27,5 +27,5 @@ Sau khi bạn copy ảnh `demo1.jpg` vào folder này:
 - Real Device: `http://192.168.x.x:3000/images/demo1.jpg`
 
 ## Kiểm tra
-Mở browser và truy cập: `http://localhost:3000/images/TEN_FILE.jpg`
+Mở browser và truy cập: `http://localhost:3000/images/pic1.jpg`
 Nếu thấy ảnh hiển thị → OK!

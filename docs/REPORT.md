@@ -16,10 +16,14 @@
 ### 4.1.1 Cấu trúc thư mục chính
 ```
 app/src/main/java/com/example/mobilegiuaky/
-├── MainActivity.java              # Màn hình danh sách ảnh
+├── MainActivity.java              # Màn hình danh sách ảnh + nút Admin
+├── AdminActivity.java             # ⭐ Quản lý ảnh (POST/DELETE) - Test performance
 ├── PhotoDetailActivity.java       # Màn hình chi tiết (Memory Leak Demo)
 ├── adapter/
 │   └── PhotoAdapter.java          # ⚠️ JANK DEMO - RecyclerView Adapter
+├── api/
+│   ├── ApiClient.java             # Retrofit client
+│   └── ApiService.java            # API endpoints (GET/POST/DELETE)
 ├── utils/
 │   ├── HeavyProcessor.java        # ⚠️ CPU DEMO - Thuật toán kém hiệu quả
 │   ├── LeakyManager.java          # ⚠️ MEMORY LEAK DEMO - Singleton rò rỉ
@@ -27,9 +31,46 @@ app/src/main/java/com/example/mobilegiuaky/
 │   └── ImageDownloader.java       # Download ảnh (Bad/Good)
 └── model/
     └── Photo.java                 # Data class
+
+backend/
+├── server.js                      # Node.js Express server
+├── database_setup.sql             # MySQL schema
+└── public/images/                 # ⭐ Static images folder
 ```
 
-### 4.1.2 Cơ chế Toggle Bad/Good Mode
+### 4.1.2 Tính năng Admin Panel (Performance Testing)
+**File:** `AdminActivity.java`
+
+Admin Panel được thiết kế để test performance của app trong các tình huống thực tế:
+
+```java
+// Thêm nhiều ảnh cùng lúc để test UI performance
+public void createMultiplePhotos(int count) {
+    long startTime = System.currentTimeMillis();
+    
+    for (int i = 0; i < count; i++) {
+        Photo photo = new Photo(0, "Demo Photo " + i, 
+                               "Performance test photo",
+                               imageUrl, "", 0);
+        // POST to API...
+    }
+    
+    long apiTime = System.currentTimeMillis() - startTime;
+    updateList();  // ⚠️ Có thể gây Jank nếu BAD Mode
+    Log.d(TAG, "Added " + count + " photos in " + apiTime + "ms");
+}
+```
+
+**Mục đích:**
+- Bulk add 1-50 ảnh → Test RecyclerView update performance
+- Bulk delete → Test memory cleanup
+- BAD/GOOD mode toggle → So sánh hiệu năng
+
+**Cách truy cập:** Từ MainActivity, nhấn nút **🔐 Admin**
+
+---
+
+### 4.1.3 Cơ chế Toggle Bad/Good Mode
 Ứng dụng sử dụng biến `useBadImplementation` để chuyển đổi giữa 2 chế độ:
 
 ```java
@@ -648,7 +689,25 @@ const dbConfig = {
 };
 ```
 
-### 9.2.5 Khởi động server
+### 9.2.5 Setup Static Images (Cho demo trên thiết bị thật)
+**Backend đã được cấu hình để serve static images từ folder `public/images/`**
+
+1. Copy ảnh từ máy tính vào folder:
+```bash
+backend/public/images/photo1.jpg
+backend/public/images/photo2.jpg
+...
+```
+
+2. Ảnh sẽ được serve tại URL:
+- Emulator: `http://10.0.2.2:3000/images/photo1.jpg`
+- Real Device: `http://192.168.x.x:3000/images/photo1.jpg`
+
+**Xem chi tiết:** [backend/public/images/SETUP_GUIDE.md](../backend/public/images/SETUP_GUIDE.md)
+
+---
+
+### 9.2.6 Khởi động server
 ```bash
 npm start
 ```
@@ -659,12 +718,14 @@ npm start
 ✅ Database connection test successful
 🚀 Server running on port 3000
 📍 API available at: http://localhost:3000/api/photos
+📸 Static images: http://localhost:3000/images/
 ```
 
-### 9.2.6 Kiểm tra API
+### 9.2.7 Kiểm tra API
 Mở browser hoặc Postman:
 ```
 GET http://localhost:3000/api/photos
+GET http://localhost:3000/images/photo1.jpg  (nếu đã copy ảnh)
 ```
 
 ---
@@ -737,49 +798,285 @@ Trên thiết bị/Emulator:
 
 ---
 
-## 9.5 Hướng dẫn Demo từng lỗi
+## 9.5 Kịch bản Demo (Chi tiết)
 
-### 9.5.1 Demo Jank/Lag
+### 9.5.0 Chuẩn bị môi trường
 ```
-BƯỚC 1: Mở app, đảm bảo switch "BAD MODE" đang BẬT (ON)
-BƯỚC 2: Mở Android Profiler → CPU tab
-BƯỚC 3: Cuộn danh sách ảnh lên xuống nhanh
-BƯỚC 4: Quan sát:
-        - UI bị khựng, giật
-        - Profiler hiển thị nhiều "Janky frames" (màu đỏ)
-        - Frame time > 16ms
-BƯỚC 5: TẮT "BAD MODE", cuộn lại
-BƯỚC 6: Quan sát: UI mượt mà, frame time < 16ms
+✅ Checklist trước khi demo:
+1. Backend đang chạy: npm start (Port 3000)
+2. Đã copy ảnh vào backend/public/images/ (nếu demo trên điện thoại thật)
+3. Android Studio Profiler đã mở: View → Tool Windows → Profiler
+4. App đã build và cài đặt trên thiết bị/emulator
+5. Kiểm tra API: curl http://localhost:3000/api/photos
 ```
 
-### 9.5.2 Demo High CPU
+---
+
+### 9.5.1 Demo Jank/Lag (Scenario A: Cuộn danh sách)
 ```
-BƯỚC 1: Bật "BAD MODE"
-BƯỚC 2: Mở Android Profiler → CPU tab
-BƯỚC 3: Nhấn nút "STRESS CPU" hoặc "SORT"
-BƯỚC 4: Quan sát:
-        - Biểu đồ CPU spike lên ~100%
-        - App có thể không phản hồi vài giây
-        - Thiết bị có thể nóng lên
-BƯỚC 5: TẮT "BAD MODE", thực hiện lại
-BƯỚC 6: Quan sát: CPU chỉ tăng nhẹ (~20%), hoàn thành nhanh
+📱 BƯỚC 1: Mở app → MainActivity hiển thị danh sách ảnh
+
+🔧 BƯỚC 2: Mở Android Profiler
+   - Android Studio: View → Tool Windows → Profiler
+   - Chọn device và process: com.example.mobilegiuaky
+   - Chuyển sang CPU tab
+
+⚠️ BƯỚC 3: Bật BAD MODE
+   - Trong app, đảm bảo switch "BAD MODE" đang BẬT (ON)
+   - Switch sẽ hiển thị màu accent color khi ON
+
+🎬 BƯỚC 4: Cuộn danh sách ảnh nhanh (swipe lên xuống)
+   Quan sát:
+   ✗ UI bị khựng, giật (Jank visible)
+   ✗ Profiler hiển thị nhiều "Janky frames" (màu đỏ/cam)
+   ✗ Frame time > 16ms (vượt đường xanh)
+   ✗ FPS < 30 (thay vì 60)
+   
+   Logcat sẽ hiển thị:
+   "D/PhotoAdapter: Processed title length: 2550" (heavy processing)
+   "D/PhotoAdapter: Sorted array length: 100" (bubble sort)
+
+✅ BƯỚC 5: TẮT BAD MODE
+   - Toggle switch sang OFF
+   - RecyclerView sẽ tự động refresh
+
+🎬 BƯỚC 6: Cuộn lại danh sách
+   Quan sát:
+   ✓ UI mượt mà, không giật
+   ✓ Frame time < 16ms
+   ✓ FPS = 60
+   ✓ Profiler không hiển thị red frames
+
+📊 BƯỚC 7: So sánh kết quả
+   | Metric        | BAD Mode | GOOD Mode |
+   |---------------|----------|----------|
+   | Frame Time    | 45ms     | 8ms      |
+   | FPS           | ~22      | ~60      |
+   | Jank Visible  | Yes ✗    | No ✓     |
 ```
 
-### 9.5.3 Demo Memory Leak
+**💡 Giải thích cho audience:**
+- BAD Mode: `onBindViewHolder()` chạy heavy operations (string processing 50 iterations, bubble sort, pixel processing) trên Main Thread
+- GOOD Mode: Chỉ bind data đơn giản, images load bằng Glide (background thread)
+- **Ngưỡng vàng: 16.67ms/frame** → Vượt = drop frame = Jank
+
+---
+
+### 9.5.2 Demo Jank/Lag (Scenario B: Bulk Add với Admin)
 ```
-BƯỚC 1: Mở Android Profiler → Memory tab
-BƯỚC 2: Ghi nhận mức Memory ban đầu (ví dụ: 80MB)
-BƯỚC 3: Từ màn hình chính, tap vào một ảnh → mở PhotoDetailActivity
-BƯỚC 4: Đảm bảo switch "LEAK MODE" đang BẬT
-BƯỚC 5: Nhấn nút "CAUSE MEMORY LEAK"
-BƯỚC 6: Nhấn Back để quay lại MainActivity
-BƯỚC 7: Lặp lại BƯỚC 3-6 khoảng 5-10 lần
-BƯỚC 8: Trong Profiler, nhấn nút "Force GC" (biểu tượng thùng rác)
-BƯỚC 9: Quan sát:
-        - Memory KHÔNG giảm sau GC (ví dụ: 130MB)
-        - LeakCanary notification xuất hiện "PhotoDetailActivity leaked!"
-BƯỚC 10: TẮT "LEAK MODE" và lặp lại
-BƯỚC 11: Quan sát: Memory giảm sau GC, không có leak notification
+📱 BƯỚC 1: Từ MainActivity, nhấn nút "🔐 Admin" (góc trên bên phải)
+   → Mở AdminActivity
+
+⚠️ BƯỚC 2: Bật BAD MODE trong AdminActivity
+   - Switch "BAD MODE" ở đầu màn hình
+
+🔧 BƯỚC 3: Mở Android Profiler (nếu chưa mở)
+
+🎬 BƯỚC 4: Nhấn nút "Add Multiple"
+   - Dialog xuất hiện: "How many photos to create?"
+   - Nhập: **50** (hoặc 20-50 tùy thiết bị)
+   - Nhấn "Create"
+
+⏱️ BƯỚC 5: Quan sát quá trình add
+   ✗ UI freeze/đơ trong ~5-10 giây (BAD Mode)
+   ✗ ProgressBar hiển thị nhưng không update smooth
+   ✗ Profiler: CPU spike ~100%, nhiều red frames
+   
+   Logcat:
+   "D/AdminActivity: API time: 5234ms"
+   "D/AdminActivity: UI update time (BAD): 8932ms" ← Rất chậm!
+
+✅ BƯỚC 6: TẮT BAD MODE
+
+🎬 BƯỚC 7: Nhấn "Delete All" để xóa ảnh vừa thêm
+   - Xác nhận xóa
+
+🎬 BƯỚC 8: Nhấn lại "Add Multiple" → Nhập **50**
+   
+   Quan sát:
+   ✓ UI mượt mà, không freeze
+   ✓ ProgressBar update smooth
+   ✓ Profiler: CPU ~40%, không có red frames
+   
+   Logcat:
+   "D/AdminActivity: API time: 5156ms" (tương tự BAD)
+   "D/AdminActivity: UI update time (GOOD): 245ms" ← Nhanh hơn 36x!
+
+📊 BƯỚC 9: Giải thích sự khác biệt
+   - **BAD Mode**: `notifyDataSetChanged()` → Rebind ALL items → Trigger heavy processing mỗi item
+   - **GOOD Mode**: `DiffUtil` hoặc `notifyItemRangeInserted()` → Chỉ bind items mới
+```
+
+---
+
+### 9.5.3 Demo High CPU
+```
+📱 BƯỚC 1: Quay lại MainActivity (từ Admin nhấn Back)
+
+⚠️ BƯỚC 2: Bật BAD MODE
+
+🔧 BƯỚC 3: Mở Android Profiler → CPU tab
+
+🎬 BƯỚC 4: Nhấn nút "STRESS CPU" (hoặc scroll để trigger sort)
+   
+   Quan sát:
+   ✗ CPU spike lên ~90-100%
+   ✗ App không phản hồi trong ~3-5 giây
+   ✗ Thiết bị có thể nóng lên (nếu lặp lại nhiều lần)
+   ✗ Dialog "App not responding" có thể xuất hiện
+   
+   Logcat:
+   "D/HeavyProcessor: Bubble sort of 2000 items took 2543ms"
+   "D/HeavyProcessor: Inefficient search took 1823ms"
+
+✅ BƯỚC 5: TẮT BAD MODE
+
+🎬 BƯỚC 6: Nhấn lại "STRESS CPU"
+   
+   Quan sát:
+   ✓ CPU chỉ tăng nhẹ (~20-30%)
+   ✓ Hoàn thành ngay lập tức (< 1 giây)
+   ✓ App vẫn phản hồi mượt mà
+   
+   Logcat:
+   "D/HeavyProcessor: Arrays.sort of 2000 items took 12ms" ← Nhanh hơn 200x!
+
+📊 BƯỚC 7: So sánh
+   | Operation         | BAD (O(n²))  | GOOD (O(n log n)) |
+   |-------------------|--------------|-------------------|
+   | Sort 2000 items   | 2543ms       | 12ms              |
+   | Search 100 times  | 1823ms       | 45ms              |
+   | CPU Usage         | 95%          | 25%               |
+```
+
+**💡 Giải thích:**
+- BAD: Bubble Sort O(n²) + Repeated linear search + Expensive math operations
+- GOOD: `Arrays.sort()` O(n log n) (Dual-Pivot Quicksort) + Cached toLowerCase()
+
+---
+
+### 9.5.4 Demo Memory Leak
+```
+📱 BƯỚC 1: Từ MainActivity, mở Android Profiler → Memory tab
+
+📊 BƯỚC 2: Ghi nhận mức Memory ban đầu
+   Ví dụ: **85MB** (baseline)
+
+🎬 BƯỚC 3: Tap vào một ảnh bất kỳ → Mở PhotoDetailActivity
+
+⚠️ BƯỚC 4: Bật LEAK MODE
+   - Switch "LEAK MODE" trong PhotoDetailActivity
+
+💣 BƯỚC 5: Nhấn nút "CAUSE MEMORY LEAK"
+   Logcat hiển thị:
+   "W/PhotoDetailActivity: ⚠️ MEMORY LEAK CAUSED!"
+   "D/LeakyManager: Singleton initialized with Activity Context" ← Root cause
+
+🔙 BƯỚC 6: Nhấn Back → Quay lại MainActivity
+
+🔄 BƯỚC 7: Lặp lại BƯỚC 3-6 tổng cộng **5-10 lần**
+   (Tap ảnh → Bật Leak Mode → Cause Leak → Back → Repeat)
+
+🗑️ BƯỚC 8: Trong Profiler, nhấn "Force GC" (icon thùng rác)
+   - Chờ GC hoàn tất (~2-3 giây)
+
+📊 BƯỚC 9: Quan sát Memory
+   ✗ Memory KHÔNG giảm (hoặc giảm rất ít)
+   ✗ Ví dụ: **140MB** → Tăng 55MB so với baseline
+   ✗ LeakCanary notification xuất hiện:
+     "┬───
+      │ GC Root: Global variable in LeakyManager.instance
+      │
+      ├─ LeakyManager.context
+      │    Leaking: YES
+      │
+      ╰→ PhotoDetailActivity
+           Leaking: YES (Activity destroyed but still in memory)"
+
+✅ BƯỚC 10: Restart app → TẮT LEAK MODE
+
+🔄 BƯỚC 11: Lặp lại BƯỚC 3-6 (nhưng KHÔNG bật Leak Mode)
+
+🗑️ BƯỚC 12: Force GC
+
+📊 BƯỚC 13: Quan sát
+   ✓ Memory giảm về baseline (~85MB)
+   ✓ KHÔNG có LeakCanary notification
+   ✓ PhotoDetailActivity được GC thu hồi thành công
+
+📊 BƯỚC 14: So sánh
+   | Scenario       | After 5 Opens | After GC |
+   |----------------|---------------|----------|
+   | With Leak      | 140MB         | 138MB ✗  |
+   | Without Leak   | 92MB          | 85MB ✓   |
+   | Leaked Objects | 5 Activities  | 0        |
+```
+
+**💡 Giải thích root cause:**
+1. `LeakyManager.getInstance().init(this)` → Singleton giữ Activity Context
+2. Singleton có lifecycle = Application (sống mãi)
+3. Activity bị destroy nhưng Singleton vẫn giữ reference
+4. GC không thể thu hồi Activity → **Memory Leak**
+5. Mỗi lần mở Activity = thêm 1 leaked object (~10MB)
+
+**Fix:** Dùng `getApplicationContext()` thay vì `this`
+
+---
+
+### 9.5.5 Demo Real Device với Static Images
+```
+💻 BƯỚC 1: Chuẩn bị trên máy tính
+   1. Copy 10-20 ảnh vào: backend/public/images/
+      Ví dụ: photo1.jpg, photo2.jpg, ..., photo20.jpg
+   2. Tìm IP máy tính: ipconfig (Windows)
+      Ví dụ: 192.168.1.105
+   3. Start backend: cd backend && npm start
+
+📱 BƯỚC 2: Kết nối điện thoại
+   - Kết nối điện thoại và máy tính cùng WiFi
+   - Update BASE_URL trong ApiClient.java: http://192.168.1.105:3000/
+   - Build và install app lên điện thoại
+
+✅ BƯỚC 3: Test kết nối
+   - Mở browser trên điện thoại
+   - Truy cập: http://192.168.1.105:3000/images/photo1.jpg
+   - Nếu thấy ảnh hiển thị → OK!
+
+🔐 BƯỚC 4: Mở Admin Panel trong app
+
+➕ BƯỚC 5: Nhấn "Add Photo"
+   - Title: Demo Photo 1
+   - Description: Test image from computer
+   - Image URL: http://192.168.1.105:3000/images/photo1.jpg
+   - Nhấn "Create"
+
+🎉 BƯỚC 6: Quay lại MainActivity
+   - Ảnh vừa thêm hiển thị trong danh sách
+   - Ảnh được load từ máy tính qua WiFi
+   - Có thể tap xem chi tiết
+
+📚 BƯỚC 7: Bulk add để test performance
+   - Quay lại Admin
+   - Add Multiple → 20 photos
+   - Quan sát thời gian load và UI performance
+```
+
+---
+
+### 9.5.6 Tips cho Demo thành công
+```
+✅ DO:
+- Prepare trước: Backend chạy, Profiler mở, ảnh đã copy
+- Giải thích TỪ TỪ mỗi bước cho audience
+- So sánh BAD vs GOOD ngay sau mỗi scenario
+- Chụp screenshot Profiler graphs để backup
+- Test trước ít nhất 1 lần để ensure mọi thứ hoạt động
+
+❌ DON'T:
+- Demo trên thiết bị yếu (RAM < 4GB) → Kết quả không rõ ràng
+- Quên force GC trước khi demo Memory Leak
+- Skip steps → Audience sẽ không hiểu
+- Demo quá nhanh → Audience không kịp quan sát Profiler
 ```
 
 ---
